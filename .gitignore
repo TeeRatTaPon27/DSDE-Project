@@ -1,3 +1,5 @@
 # Dataset and Data insight
 data-insight/
 dataset/
+__pycache__/
+*.pyc
