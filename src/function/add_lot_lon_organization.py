@@ -3,6 +3,7 @@ from geopy.geocoders import Nominatim
 from geopy.extra.rate_limiter import RateLimiter
 from tqdm import tqdm # ใช้สำหรับแสดง Progress Bar ระหว่าง Geocoding
 import time
+import os
 
 # เปิดใช้งาน tqdm สำหรับ Pandas
 tqdm.pandas() 
@@ -11,8 +12,15 @@ tqdm.pandas()
 # 1. โหลดข้อมูล
 # ----------------------------------------------------
 # ชื่อไฟล์ CSV ของคุณ
-input_filename = "dataset/bkk_organization_unique.csv"
-output_filename = "data-insight/bkk_organization_with_coords.csv"
+
+# ชื่อไฟล์ผลลัพธ์
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+input_filename = os.path.join(project_root, 'dataset', 'bkk_organization_unique.csv')
+# print(f"Reading data from: {input_path}
+
+OUTPUT_NAME = "bkk_organization_with_coords.csv"
+OUTPUT_CSV = os.path.join(project_root, 'data-insight', OUTPUT_NAME)
 
 try:
     df = pd.read_csv(input_filename)

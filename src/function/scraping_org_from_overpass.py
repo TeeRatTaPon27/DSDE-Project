@@ -21,7 +21,7 @@
 import uuid
 import requests
 import pandas as pd
-
+import os
 
 # -----------------------------
 # 1) CONFIG
@@ -61,8 +61,11 @@ AMENITY_FILTER = [
     "bureau_de_change",
 ]
 
-OUTPUT_CSV = "bkk_osm_organization_locations.csv"
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
 
+OUTPUT_NAME = "bkk_osm_organization_locations.csv"
+OUTPUT_CSV = os.path.join(project_root, 'dataset', OUTPUT_NAME)
 
 # -----------------------------
 # 2) สร้าง Overpass Query

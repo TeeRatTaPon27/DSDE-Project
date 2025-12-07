@@ -16,7 +16,14 @@ import concurrent.futures as futures
 import requests
 import pandas as pd
 import sys
-sys.path.append(r"C:/Users/acer/OneDrive/Documents/Road-to-AI/Intro-Data-Science-S1/Project-DSDE/src/find_insight")
+import os
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, '..', '..'))
+input_path = os.path.join(project_root, 'src', 'find_insight')
+print(f"Reading data from: {input_path}")
+
+sys.path.append(input_path)
 
 from bkk_centroids import BKK_CENTROIDS
 
@@ -39,8 +46,8 @@ CHUNK_DAYS = 30
 MAX_WORKERS = 5
 
 # ชื่อไฟล์ผลลัพธ์
-OUTPUT_CSV = "bkk_pm25_daily_2023_all_fast.csv"
-
+OUTPUT_NAME = "bkk_pm25_daily_2023_all_fast.csv"
+OUTPUT_CSV = os.path.join(project_root, 'data-insight', OUTPUT_NAME)
 
 # -------------------------------------------------
 # 2) helper ตัดช่วงวันที่เป็น block เล็ก ๆ
