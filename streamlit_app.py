@@ -564,8 +564,131 @@ with tab_main:
         )
 
         st.plotly_chart(fig, use_container_width=True)
+        
+    # ---------------------------
+    # Status Map
+    # ---------------------------
+    st.subheader("📋 แผนที่สถานะการดำเนินการ")
     
-        # ---------------------------
+    if df_filtered.empty:
+        st.warning("ไม่พบข้อมูลตามเงื่อนไขที่เลือก")
+    else:
+        # สร้างแผนที่สถานะ
+        with st.spinner("กำลังสร้างแผนที่สถานะ..."):
+            df_status_map = prepare_map_data(df_filtered)
+            
+            # สีตามสถานะ (สมมติมีคอลัมน์ 'status' หรือสร้างจากคอลัมน์อื่น)
+            # ถ้าไม่มีคอลัมน์ status ให้สร้างจาก timestamp หรืออื่นๆ
+            if 'state' in df_status_map.columns:
+                # ถ้ามีคอลัมน์ status
+                status_colors = {
+                    'เสร็จสิ้น': [0, 255, 0, 180],      # 🟢 เขียว
+                    'กำลังดำเนินการ': [0, 0, 255, 180], # 🔵 น้ำเงิน  
+                    'รอรับเรื่อง': [255, 0, 0, 180],      # 🔴 แดง
+                }
+                
+                # สร้างสีตามสถานะ
+                df_status_map['color'] = df_status_map['state'].apply(
+                    lambda x: status_colors.get(x, [150, 150, 150, 180])  # สีเทา default
+                )
+            else:
+                # ถ้าไม่มีคอลัมน์ status ให้แบ่งตามเวลาหรือวิธีอื่น
+                st.info("⚠️ ไม่พบคอลัมน์ 'status' กำลังสร้างสถานะจากข้อมูลที่มี...")
+                
+                # ตัวอย่าง: แบ่งตามเวลา (timestamp เก่า = เสร็จสิ้น, ใหม่ = กำลังดำเนินการ)
+                current_time = pd.Timestamp.now()
+                
+                def assign_status_by_time(timestamp):
+                    """กำหนดสถานะตามเวลา"""
+                    time_diff = current_time - timestamp
+                    days_diff = time_diff.days
+                    
+                    if days_diff > 30:
+                        return 'เสร็จสิ้น'      # เก่ากว่า 30 วัน
+                    elif days_diff > 7:
+                        return 'กำลังดำเนินการ'  # 7-30 วัน
+                    else:
+                        return 'รอรับเรื่อง'     # น้อยกว่า 7 วัน
+                
+                # เพิ่มคอลัมน์ status
+                df_status_map['state'] = df_status_map['timestamp_dt'].apply(assign_status_by_time)
+                
+                # สีตามสถานะ
+                status_colors = {
+                    'เสร็จสิ้น': [0, 255, 0, 180],      # 🟢 เขียว
+                    'กำลังดำเนินการ': [0, 0, 255, 180], # 🔵 น้ำเงิน
+                    'รอรับเรื่อง': [255, 0, 0, 180],      # 🔴 แดง
+                }
+                
+                df_status_map['color'] = df_status_map['state'].apply(
+                    lambda x: status_colors.get(x, [150, 150, 150, 180])
+                )
+            
+            # นับจำนวนแต่ละสถานะ
+            status_counts = df_status_map['state'].value_counts()
+            
+            # แสดงสถิติสถานะ
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("🟢 เสร็จสิ้น", f"{status_counts.get('เสร็จสิ้น', 0):,}")
+            with col2:
+                st.metric("🔵 กำลังดำเนินการ", f"{status_counts.get('กำลังดำเนินการ', 0):,}")
+            with col3:
+                st.metric("🔴 รอรับเรื่อง", f"{status_counts.get('รอรับเรื่อง', 0):,}")
+            
+            # สร้างแผนที่
+            status_layer = pdk.Layer(
+                "ScatterplotLayer",
+                data=df_status_map,
+                get_position='[lon, lat]',
+                get_color="color",
+                get_radius=40,
+                pickable=True,
+                opacity=0.7,
+            )
+            
+            view_state = pdk.ViewState(
+                latitude=df_status_map["lat"].mean(),
+                longitude=df_status_map["lon"].mean(),
+                zoom=11,
+            )
+            
+            r = pdk.Deck(
+                layers=[status_layer],
+                initial_view_state=view_state,
+                tooltip={
+                    "html": """
+                    <b>สถานะ:</b> {status}<br>
+                    <b>ประเภท:</b> {type_exploded}<br>
+                    <b>องค์กร:</b> {organization}<br>
+                    <b>วันที่:</b> {timestamp_dt}<br>
+                    <b>ตำแหน่ง:</b> ({lat:.4f}, {lon:.4f})
+                    """,
+                    "style": {"color": "white", "backgroundColor": "#333", "padding": "5px"}
+                }
+            )
+            
+            st.pydeck_chart(r)
+            
+            # แสดง Legend
+            st.markdown("""
+            <div style="display: flex; justify-content: center; gap: 20px; margin-top: 10px;">
+                <div style="text-align: center;">
+                    <div style="width: 20px; height: 20px; background-color: rgb(0, 255, 0); border-radius: 50%; display: inline-block;"></div>
+                    <div>🟢 เสร็จสิ้น</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="width: 20px; height: 20px; background-color: rgb(0, 0, 255); border-radius: 50%; display: inline-block;"></div>
+                    <div>🔵 กำลังดำเนินการ</div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="width: 20px; height: 20px; background-color: rgb(255, 0, 0); border-radius: 50%; display: inline-block;"></div>
+                    <div>🔴 รอรับเรื่อง</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # ---------------------------
     # Map with Clustering
     # ---------------------------
     st.header("🗺️ ตำแหน่งปัญหาบนแผนที่ (DBSCAN Clustering)")

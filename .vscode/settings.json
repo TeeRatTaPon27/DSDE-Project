@@ -1,0 +1,5 @@
+{
+    "python.analysis.extraPaths": [
+        "./src/find_insight"
+    ]
+}
